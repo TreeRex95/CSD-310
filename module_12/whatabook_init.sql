@@ -65,13 +65,13 @@ CREATE TABLE wishlist (
     insert store record 
 */
 INSERT INTO store(locale)
-    VALUES('123 1st St. NE Luverne, MN 56156');
+  VALUES('123 1st St. NE Luverne, MN 56156');
 
 /*
     insert book records 
 */
 INSERT INTO book(book_name, author, details)
-    VALUES('FullMetal Alchemist', 'Hiromu Arakawa', 'Two brothers search for a stone');
+  VALUES('FullMetal Alchemist', 'Hiromu Arakawa', 'Two brothers search for a stone');
 
 INSERT INTO book(book_name, author, details)
   VALUES('My Hero Academia', 'Kohei Horikoshi', 'Boy gains super powers');
