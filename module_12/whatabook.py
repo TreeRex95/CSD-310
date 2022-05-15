@@ -6,7 +6,6 @@
 """
 
 """ import statements """
-from re import T
 import sys
 import mysql.connector
 from mysql.connector import errorcode
