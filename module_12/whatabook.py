@@ -1,11 +1,12 @@
 """ 
     Title: what_a_book.py
     Author: Tristan Boetcher
-    Date: 5/10/22
+    Date: 5/14/22
     Description: WhatABook program; Console program that interfaces with a MySQL database
 """
 
 """ import statements """
+from re import T
 import sys
 import mysql.connector
 from mysql.connector import errorcode
@@ -19,192 +20,194 @@ config = {
     "raise_on_warnings": True
 }
 
+#  method to display main menu and get user input
 def show_menu():
-    print("\n  -- Main Menu --")
+    print ("\n- Welcome to WhatABook -")
+    print("\nMain Menu\n\t1. View Books\n\t2. View Store Locations\n\t3. My Account\n\t4. Exit Program")
+      
+    menu_selection = input("\nPlease enter your selection :\t") # user input
 
-    print("    1. View Books\n    2. View Store Locations\n    3. My Account\n    4. Exit Program")
+    while menu_selection not in ("1", "2", "3", "4"):
+        menu_selection = input("\n*Invalid selection*\n\nPlease enter a selection between 1-4 :\t") # if selection is invalid
 
-    try:
-        choice = int(input('      <Example enter: 1 for book listing>: '))
+    if menu_selection == "1": # if 1 is selected it will show the books
+        show_books(cursor)
 
-        return choice
-    except ValueError:
-        print("\n  Invalid number, program terminated...\n")
+    if menu_selection == "2": # if 2 is selected it will show the locations
+        show_locations(cursor)
 
-        sys.exit(0)
+    if menu_selection == "3": # if 3 is selected it will allow you to enter user id
+        user_id = validate_user(cursor)
+        show_account_menu(cursor, user_id)
 
+    if menu_selection == "4": # if 4 is selected you can exit the program
+        print("\n\tExit WhatABook")
+        exit()
+
+#  method to get and display books
 def show_books(_cursor):
-    # inner join query 
-    _cursor.execute("SELECT book_id, book_name, author, details from book")
 
-    # get the results from the cursor object 
-    books = _cursor.fetchall()
-
-    print("\n  -- DISPLAYING BOOK LISTING --")
+    print("\n\t- BOOKS -\n") # print title
     
-    # iterate over the player data set and display the results 
-    for book in books:
-        print("  Book Name: {}\n  Author: {}\n  Details: {}\n".format(book[0], book[1], book[2]))
+    cursor.execute("SELECT book_id, book_name, author, details " + # select statement for books
+                    "FROM book ORDER BY book_id")
 
+    books = cursor.fetchall()
+    for book in books: # print information about the books
+        print("\tBook ID:  {}\n\t\tBook Name:\t{}\n\t\tAuthor:\t\t{}\n\t\tDetails:\t{}\n".format(book[0], book[1], book[2], book[3]))
+
+    show_menu() # show menu
+
+#  method to get and display location information
 def show_locations(_cursor):
-    _cursor.execute("SELECT store_id, locale from store")
+
+    _cursor.execute("SELECT store_id, locale from store") # select statement for location
 
     locations = _cursor.fetchall()
 
-    print("\n  -- DISPLAYING STORE LOCATIONS --")
+    print("\n\t- STORE LOCATIONS -\n") # title
 
     for location in locations:
-        print("  Locale: {}\n".format(location[1]))
-
-def validate_user():
-    """ validate the users ID """
-
-    try:
-        user_id = int(input('\n      Enter a customer id <Example 1 for user_id 1>: '))
-
-        if user_id < 0 or user_id > 3:
-            print("\n  Invalid customer number, program terminated...\n")
-            sys.exit(0)
-
-        return user_id
-    except ValueError:
-        print("\n  Invalid number, program terminated...\n")
-
-        sys.exit(0)
-
-def show_account_menu():
-    """ display the users account menu """
-
-    try:
-        print("\n      -- Customer Menu --")
-        print("        1. Wishlist\n        2. Add Book\n        3. Main Menu")
-        account_option = int(input('        <Example enter: 1 for wishlist>: '))
-
-        return account_option
-    except ValueError:
-        print("\n  Invalid number, program terminated...\n")
-
-        sys.exit(0)
-
-def show_wishlist(_cursor, _user_id):
-    """ query the database for a list of books added to the users wishlist """
-
-    _cursor.execute("SELECT user.user_id, user.first_name, user.last_name, book.book_id, book.book_name, book.author " + 
-                    "FROM wishlist " + 
-                    "INNER JOIN user ON wishlist.user_id = user.user_id " + 
-                    "INNER JOIN book ON wishlist.book_id = book.book_id " + 
-                    "WHERE user.user_id = {}".format(_user_id))
+        print("\t{}\n".format(location[1])) # print location details
     
-    wishlist = _cursor.fetchall()
+    show_menu() # show menu
 
-    print("\n        -- DISPLAYING WISHLIST ITEMS --")
+#  method to get user id and validate
+def validate_user(cursor):
+    
+    print ('\n\t- MY ACCOUNT -\n') # title
 
-    for book in wishlist:
-        print("        Book Name: {}\n        Author: {}\n".format(book[4], book[5]))
+    cursor.execute("SELECT user_id FROM user") # select statement for users
+    user_id_list = []
+    query_results = cursor.fetchall()
+    for row in query_results:
+        user_id_list.append(str(row[0])) 
 
-def show_books_to_add(_cursor, _user_id):
-    """ query the database for a list of books not in the users wishlist """
+    user_id = input("\tPlease enter user id:\t ") # get user input
 
-    query = ("SELECT book_id, book_name, author, details "
-            "FROM book "
-            "WHERE book_id NOT IN (SELECT book_id FROM wishlist WHERE user_id = {})".format(_user_id))
+    while (user_id not in user_id_list):
+        user_id = input("\n\t*Invalid user id*\n\n\tPlease enter a valid user id:\t ") # error message
 
-    print(query)
+    return user_id 
 
-    _cursor.execute(query)
+#  method to display account menu and get input
+def show_account_menu(cursor, user_id):
+    
+    cursor.execute("SELECT first_name FROM user" + # select statement for account
+                    " WHERE user_id = " + str(user_id))
+    first_name = cursor.fetchall()
+    
+    print("\n\tAccount Menu\n\n\t1. Wishlist\n\t2. Add Book\n\t3. Main Menu") # print options
 
-    books_to_add = _cursor.fetchall()
+    menu_selection = input("\n\tPlease enter your selection:\t") # user input
+    
+    while menu_selection not in ("1", "2", "3"):
+        menu_selection = input("\n\t*Invalid selection*\n\n\tPlease enter a valid selection:\t") # invalid error message
 
-    print("\n        -- DISPLAYING AVAILABLE BOOKS --")
+    if menu_selection == "1":
+        show_wishlist(cursor, user_id) # if user selects 1 it will show the wishlist
+    
+    if menu_selection == "2": # if user selects 2 it will show the books that can be added to wishlist
+        book_id = show_books_to_add(cursor, user_id)
+        add_book_to_wishlist(cursor, user_id, book_id) # add book to wishlist option
+    
+    if menu_selection == "3": # if user selects 3 will bring user back to main menu
+        show_menu() # show menu
 
+#  method to show books in a users wishlist
+def show_wishlist(cursor, user_id):
+    
+    print("\n\t\t- Your Wishlist -") # title
+    
+    cursor.execute("SELECT book.book_name, book.author" + # select statement for wishlist
+                    " FROM book" +
+                    " INNER JOIN wishlist ON book.book_id = wishlist.book_id" +
+                    " INNER JOIN user ON wishlist.user_id = user.user_id" +
+                    " WHERE user.user_id = " + user_id)
+
+    user_wishlist = cursor.fetchall()
+    
+    for row in user_wishlist: # print title and author for wishlist items
+        print(f"\n\tTitle: {row[0]}")
+        print(f"\tAuthor: {row[1]}\n")
+
+    show_account_menu(cursor, user_id)
+
+#  method to display books that are not already in the wishlist and get input
+def show_books_to_add(cursor, user_id):
+    
+    print("\n\t\t- Available Books -") # title
+
+    cursor.execute("SELECT book_id, book_name, author, details FROM book" + # select statement for adding books to wishlist
+                    " WHERE book_id NOT IN (SELECT book_id FROM wishlist" +
+                    " WHERE user_id = " + str(user_id) + ")" +
+                    " ORDER BY book_id")
+    
+    books_to_add = cursor.fetchall() # showing books to add
+
+    for book in books_to_add: # print book information
+        print(f"\nBook Id:    {book[0]}")
+        print(f"\tTitle: {book[1]}")
+        print(f"\tAuthor: {book[2]}")
+        print(f"\tDetails: {book[3]}\n")
+
+    books_to_add_ids = []
     for book in books_to_add:
-        print("        Book Id: {}\n        Book Name: {}\n".format(book[0], book[1]))
+        books_to_add_ids.append(str(book[0])) # append list
 
-def add_book_to_wishlist(_cursor, _user_id, _book_id):
-    _cursor.execute("INSERT INTO wishlist(user_id, book_id) VALUES({}, {})".format(_user_id, _book_id))
+    book_id = input("\n\t\tEnter Book Id that you want to add to your list or X to return to your Account Menu:\t")
+         
+    while book_id not in books_to_add_ids and book_id.lower() != "x": # error message
+        book_id = input("\n\t\t***Invalid selection.***\n\n\t\tEnter valid book id or X to return to the Account Menu:\t")
 
+    if book_id.lower() == "x": # show account menu
+        show_account_menu(cursor, user_id)
+    else:
+        return book_id # return to book ids
+
+#  method to add books
+def add_book_to_wishlist(cursor, user_id, book_id):
+
+    # insert statement for wishlist
+    cursor.execute("INSERT INTO wishlist (user_id, book_id)" + "VALUES (" + user_id + ", " + book_id + ")")
+
+    db.commit() # commit changes
+
+    cursor.execute("SELECT book_name FROM book WHERE book_id = " + book_id) # select statement for books
+    book_names = cursor.fetchall() # get book names
+    
+    for row in book_names:
+        book_name = row[0]
+    
+    # message to say that the book was added
+    print ("\n\t\tBook id {}: {} was successfully added to your wishlist!".format(book_id, book_name))
+
+    show_account_menu(cursor, user_id) # account menu
+       
 try:
-    """ try/catch block for handling potential MySQL database errors """ 
+    # connect to database
+    db = mysql.connector.connect(**config)
 
-    db = mysql.connector.connect(**config) # connect to the WhatABook database 
+    # cursor for MySQL queries
+    cursor = db.cursor()
+    
+    # display Main Menu
+    show_menu()
 
-    cursor = db.cursor() # cursor for MySQL queries
 
-    print("\n  Welcome to the WhatABook Application! ")
-
-    user_selection = show_menu() # show the main menu 
-
-    # while the user's selection is not 4
-    while user_selection != 4:
-
-        # if the user selects option 1, call the show_books method and display the books
-        if user_selection == 1:
-            show_books(cursor)
-
-        # if the user selects option 2, call the show_locations method and display the configured locations
-        if user_selection == 2:
-            show_locations(cursor)
-
-        # if the user selects option 3, call the validate_user method to validate the entered user_id 
-        # call the show_account_menu() to show the account settings menu
-        if user_selection == 3:
-            my_user_id = validate_user()
-            account_option = show_account_menu()
-
-            # while account option does not equal 3
-            while account_option != 3:
-
-                # if the use selects option 1, call the show_wishlist() method to show the current users 
-                # configured wishlist items 
-                if account_option == 1:
-                    show_wishlist(cursor, my_user_id)
-
-                # if the user selects option 2, call the show_books_to_add function to show the user 
-                # the books not currently configured in the users wishlist
-                if account_option == 2:
-
-                    # show the books not currently configured in the users wishlist
-                    show_books_to_add(cursor, my_user_id)
-
-                    # get the entered book_id 
-                    book_id = int(input("\n        Enter the id of the book you want to add: "))
-                    
-                    # add the selected book the users wishlist
-                    add_book_to_wishlist(cursor, my_user_id, book_id)
-
-                    db.commit() # commit the changes to the database 
-
-                    print("\n        Book id: {} was added to your wishlist!".format(book_id))
-
-                # if the selected option is less than 0 or greater than 3, display an invalid user selection 
-                if account_option < 0 or account_option > 3:
-                    print("\n      Invalid option, please retry...")
-
-                # show the account menu 
-                account_option = show_account_menu()
-        
-        # if the user selection is less than 0 or greater than 4, display an invalid user selection
-        if user_selection < 0 or user_selection > 4:
-            print("\n      Invalid option, please retry...")
-            
-        # show the main menu
-        user_selection = show_menu()
-
-    print("\n\n  Program terminated...")
-
+# error handling
 except mysql.connector.Error as err:
-    """ handle errors """ 
 
     if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-        print("  The supplied username or password are invalid")
+        print("\tInvalid username or password")
 
     elif err.errno == errorcode.ER_BAD_DB_ERROR:
-        print("  The specified database does not exist")
+        print("\tInvalid database")
 
     else:
         print(err)
 
+# close database connection
 finally:
-    """ close the connection to MySQL """
-
+    
     db.close()
